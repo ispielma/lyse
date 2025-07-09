@@ -379,14 +379,14 @@ class AnalysisWorker(object):
                 plot = self.plots[fig]
 
                 # Get the Plot subclass registered for this plot identifier if it exists
-                cls = lyse.get_plot_class(identifier)
+                plot_class = lyse.utils.worker.get_plot_class(identifier)
                 # If no plot was registered, use the base class
-                if cls is None: cls = Plot
+                if plot_class is None: plot_class = Plot
                 
                 # if plot instance does not match the expected identifier,  
                 # or the identifier in use with this plot has changes,
                 #  we need to close and reopen it!
-                if type(plot) != cls or plot.identifier != identifier:
+                if type(plot) != plot_class or plot.identifier != identifier:
                     window_state = plot.get_window_state()
 
                     # Delete the plot
@@ -416,15 +416,15 @@ class AnalysisWorker(object):
     def new_figure(self, fig, identifier):
         try:
             # Get custom class for this plot if it is registered
-            cls = lyse.get_plot_class(identifier) # IBS: register_plot_class is not used anywhere.
+            plot_class = lyse.utils.worker.get_plot_class(identifier) # IBS: register_plot_class is not used anywhere.
 
             # If no plot was registered, use the base class
-            if cls is None: cls = Plot
+            if plot_class is None: plot_class = Plot
             # if cls is not a subclass of Plot, then raise an Exception
-            if not issubclass(cls, Plot): 
+            if not issubclass(plot_class, Plot): 
                 raise RuntimeError('The specified class must be a subclass of lyse.Plot')
             # Instantiate the plot
-            self.plots[fig] = cls(fig, identifier, self.mdiArea_canvas)
+            self.plots[fig] = plot_class(fig, identifier, self.mdiArea_canvas)
         except Exception:
             traceback_lines = traceback.format_exception(*sys.exc_info())
             message = """Failed to instantiate custom class for plot "{identifier}".

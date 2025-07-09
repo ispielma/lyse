@@ -38,12 +38,10 @@ from qtutils.auto_scroll_to_end import set_auto_scroll_to_end
 import qtutils.icons
 
 # Lyse imports
-import lyse.routines
 import lyse.utils.gui
 import lyse.widgets
-from lyse.gui_analysis_subprocess import PlotGUI
+import lyse.routines
 import lyse.communication
-
 
 from lyse.utils import LYSE_DIR
 
@@ -1084,10 +1082,10 @@ class Lyse(object):
         signal.signal(signal.SIGINT, lambda *args: self.qapplication.exit())
 
         self.output_box = OutputBox(self.ui.verticalLayout_output_box)
-        self.singleshot_routinebox = RoutineBox(self, self.ui.verticalLayout_singleshot_routinebox, self.exp_config,
+        self.singleshot_routinebox = lyse.routines.RoutineBox(self, self.ui.verticalLayout_singleshot_routinebox, self.exp_config,
                                                 self, to_singleshot, from_singleshot, self.output_box.port)
         
-        self.multishot_routinebox = RoutineBox(self, self.ui.verticalLayout_multishot_routinebox, self.exp_config,
+        self.multishot_routinebox = lyse.routines.RoutineBox(self, self.ui.verticalLayout_multishot_routinebox, self.exp_config,
                                                self, to_multishot, from_multishot, self.output_box.port, multishot=True)
         self.filebox = FileBox(self, self.ui.verticalLayout_filebox, self.exp_config,
                                to_singleshot, from_singleshot, to_multishot, from_multishot)

@@ -19,7 +19,6 @@ import numpy as np
 from qtutils import inmain_decorator
 from qtutils.qt import QtWidgets
 
-
 @inmain_decorator()
 def error_dialog(app, message):
     QtWidgets.QMessageBox.warning(app.ui, 'lyse', message)

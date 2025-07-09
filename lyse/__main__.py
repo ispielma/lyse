@@ -20,11 +20,13 @@ import desktop_app
 desktop_app.set_process_appid('lyse')
 
 # Splash screen
-from labscript_utils.splash import Splash
-splash = Splash(os.path.join(os.path.dirname(__file__), 'lyse.svg'))
+import labscript_utils.splash
+splash = labscript_utils.splash.Splash(os.path.join(os.path.dirname(__file__), 'lyse.svg'))
 splash.show()
 
-splash.update_text('importing standard library modules')
+from lyse.utils import importer
+importer(splash)
+
 # stdlib imports
 import sys
 
