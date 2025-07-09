@@ -38,10 +38,13 @@ from qtutils import inmain_decorator, inmain, UiLoader, DisconnectContextManager
 from qtutils.auto_scroll_to_end import set_auto_scroll_to_end
 import qtutils.icons
 
-from lyse import LYSE_DIR, _rangeindex_to_multiindex
 import lyse.analysis
 import lyse.ui_helpers
 from lyse.gui_analysis_subprocess import PlotGUI
+
+# Lyse imports
+from lyse.dataframe_utilities import rangeindex_to_multiindex
+from lyse.utils import LYSE_DIR
 
 @inmain_decorator()
 def error_dialog(app, message):
@@ -181,7 +184,7 @@ class WebServer(ZMQServer):
         elif isinstance(request_data, tuple) and request_data[0]=='get dataframe' and len(request_data)==3:
             _, n_sequences, filter_kwargs = request_data
             df = self._retrieve_dataframe()
-            df = _rangeindex_to_multiindex(df, inplace=True)
+            df = rangeindex_to_multiindex(df, inplace=True)
             # Return only a subset of the dataframe if instructed to do so.
             if n_sequences is not None:
                 df = self._extract_n_sequences_from_df(df, n_sequences)

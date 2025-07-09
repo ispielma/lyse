@@ -1,9 +1,21 @@
-"""Lyse GUI and supporting code
+#####################################################################
+#                                                                   #
+# /__main__.py                                                      #
+#                                                                   #
+# Copyright 2013, Monash University                                 #
+#                                                                   #
+# This file is part of the program lyse, in the labscript suite     #
+# (see http://labscriptsuite.org), and is licensed under the        #
+# Simplified BSD License. See the license.txt file in the root of   #
+# the project for the full license.                                 #
+#                                                                   #
+#####################################################################
+"""Top level Lyse GUI
 """
 import os
+import labscript_utils.excepthook
 
-
-# Associate app windows with OS menu shortcuts:
+# Associate app windows with OS menu shortcuts, must be before any GUI calls, apparently
 import desktop_app
 desktop_app.set_process_appid('lyse')
 
