@@ -17,7 +17,7 @@ import numpy as np
 
 # qt imports
 from qtutils import inmain_decorator
-from qtutils.qt import QtWidgets, QtCore
+from qtutils.qt import QtWidgets
 
 
 @inmain_decorator()

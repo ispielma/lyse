@@ -25,7 +25,7 @@ import subprocess
 from labscript_utils.qtwidgets.headerview_with_widgets import HorizontalHeaderViewWithWidgets
 
 # qt imports
-from qtutils.qt import QtCore, QtGui
+from qtutils.qt import QtCore, QtGui, QtWidgets
 from qtutils import inmain_decorator, UiLoader, DisconnectContextManager
 import qtutils.icons
 
@@ -62,7 +62,7 @@ class RoutineBox(RoutineBoxData):
         
         loader = UiLoader()
         loader.registerCustomWidget(lyse.widgets.TreeView)
-        self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/routinebox.ui'))
+        self.ui = loader.load(os.path.join(lyse.utils.LYSE_DIR, 'user_interface/routinebox.ui'))
         container.addWidget(self.ui)
 
         if multishot:
@@ -175,16 +175,7 @@ class RoutineBox(RoutineBoxData):
                 self.app.output_box.output('Warning: Ignoring duplicate analysis routine %s\n'%filepath, red=True)
                 continue
             
-            filetype, new_filepath = get_analysis_type(filepath)
-            if filetype == "INVALID":
-                self.app.output_box.output(f'Warning: invalid analysis routine {filepath}\n', red=True)
-                continue                
-
-            if filetype == "CLASSIC":
-                routine = lyse.routines.ClassicAnalysisRoutine(self.app, filepath, self.model, self.output_box_port, checked)
-            elif filetype == "GUI_V1.0":
-                self.app.output_box.output(f'Warning: new analysis routine detected {filepath}\n', green=True)
-                continue
+            routine = AnalysisRoutine(self.app, filepath, self.model, self.output_box_port, checked)
 
             self.routines.append(routine)
         self.update_select_all_checkstate()
@@ -421,9 +412,9 @@ class RoutineBox(RoutineBoxData):
             else:
                 self.select_all_checkbox.setCheckState(QtCore.Qt.PartiallyChecked)
 
-class ClassicAnalysisRoutine(object):
+class AnalysisRoutine(object):
 
-    filepath_subprocess = 'classic_analysis_subprocess.py'
+    filepath_subprocess = 'analysis_subprocess.py'
 
     def __init__(self, app, filepath, model, output_box_port, checked=QtCore.Qt.Checked):
         self.app = app # Reference to main lyse app
@@ -457,7 +448,7 @@ class ClassicAnalysisRoutine(object):
         
     def start_worker(self):
         # Start a worker process for this analysis routine:
-        worker_path = os.path.join(lyse.LYSE_DIR, self.filepath_subprocess)
+        worker_path = os.path.join(lyse.utils.LYSE_DIR, self.filepath_subprocess)
 
         child_handles = self.app.process_tree.subprocess(
             worker_path,
