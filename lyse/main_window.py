@@ -27,9 +27,7 @@ from labscript_utils.qtwidgets.headerview_with_widgets import HorizontalHeaderVi
 from labscript_utils.qtwidgets.outputbox import OutputBox
 from labscript_utils import dedent
 
-from lyse.dataframe_utilities import (concat_with_padding,
-                                      get_dataframe_from_shot,
-                                      replace_with_padding)
+from lyse.dataframe_utilities import concat_with_padding, get_dataframe_from_shot, replace_with_padding
 
 from qtutils.qt import QtCore, QtGui, QtWidgets
 from qtutils.qt.QtCore import pyqtSignal as Signal
