@@ -1231,7 +1231,7 @@ def figure_to_clipboard(figure=None, **kwargs):
 
     figure.savefig(tempfile_name, **kwargs)
 
-    tempfile2clipboard = os.path.join(LYSE_DIR, 'tempfile2clipboard.py')
+    tempfile2clipboard = os.path.join(LYSE_DIR, 'utils/tempfile2clipboard.py')
     start_daemon([sys.executable, tempfile2clipboard, '--delete', tempfile_name])
 
 
