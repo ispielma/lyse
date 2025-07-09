@@ -37,7 +37,7 @@ from labscript_utils.qtwidgets.outputbox import OutputBox
 from labscript_utils.modulewatcher import ModuleWatcher
 import lyse
 import lyse.utils.worker
-import lyse.ui_helpers
+import lyse.utils.gui
 
 # Associate app windows with OS menu shortcuts:
 import desktop_app
@@ -557,7 +557,7 @@ class LyseWorker():
         window_pos = self.ui.pos()
         save_data['window_pos'] = (window_pos.x(), window_pos.y())
 
-        save_data['screen_geometry'] = lyse.ui_helpers.get_screen_geometry(self.qapplication)
+        save_data['screen_geometry'] = lyse.utils.gui.get_screen_geometry(self.qapplication)
 
         save_data['button_show_terminal'] = self.ui.button_show_terminal.isChecked()
 
@@ -593,7 +593,7 @@ class LyseWorker():
         # only one now, and the splitters may not make sense in light of a
         # different window size, so better to fall back to defaults:
 
-        current_screen_geometry = lyse.ui_helpers.get_screen_geometry(self.qapplication)
+        current_screen_geometry = lyse.utils.gui.get_screen_geometry(self.qapplication)
         if current_screen_geometry == screen_geometry:
             if 'window_size' in save_data:
                 self.ui.resize(*save_data['window_size'])

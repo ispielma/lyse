@@ -40,94 +40,12 @@ import qtutils.icons
 
 # Lyse imports
 import lyse.analysis
-import lyse.ui_helpers
+import lyse.utils.gui
 import lyse.widgets
 from lyse.gui_analysis_subprocess import PlotGUI
 
 from lyse.dataframe_utilities import rangeindex_to_multiindex
 from lyse.utils import LYSE_DIR
-
-
-@inmain_decorator()
-def error_dialog(app, message):
-    QtWidgets.QMessageBox.warning(app.ui, 'lyse', message)
-
-
-@inmain_decorator()
-def question_dialog(app, message):
-    reply = QtWidgets.QMessageBox.question(app.ui, 'lyse', message,
-                                       QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-    return (reply == QtWidgets.QMessageBox.Yes)
-
-
-def scientific_notation(x, sigfigs=4, mode='eng'):
-    """Returns a unicode string of the float f in scientific notation"""
-
-    times = u'\u00d7'
-    thinspace = u'\u2009'
-    hairspace = u'\u200a'
-    sups = {u'-': u'\u207b',
-            u'0': u'\u2070',
-            u'1': u'\xb9',
-            u'2': u'\xb2',
-            u'3': u'\xb3',
-            u'4': u'\u2074',
-            u'5': u'\u2075',
-            u'6': u'\u2076',
-            u'7': u'\u2077',
-            u'8': u'\u2078',
-            u'9': u'\u2079'}
-
-    prefixes = {
-        -24: u"y",
-        -21: u"z",
-        -18: u"a",
-        -15: u"f",
-        -12: u"p",
-        -9: u"n",
-        -6: u"\u03bc",
-        -3: u"m",
-        0: u"",
-        3: u"k",
-        6: u"M",
-        9: u"G",
-        12: u"T",
-        15: u"P",
-        18: u"E",
-        21: u"Z",
-        24: u"Y"
-    }
-
-    if not isinstance(x, float):
-        raise TypeError('x must be floating point number')
-    if np.isnan(x) or np.isinf(x):
-        return str(x)
-    if x != 0:
-        exponent = int(np.floor(np.log10(np.abs(x))))
-        # Only multiples of 10^3
-        exponent = int(np.floor(exponent / 3) * 3)
-    else:
-        exponent = 0
-
-    significand = x / 10 ** exponent
-    pre_decimal, post_decimal = divmod(significand, 1)
-    digits = sigfigs - len(str(int(pre_decimal)))
-    significand = round(significand, digits)
-    result = str(significand)
-    if exponent:
-        if mode == 'exponential':
-            superscript = ''.join(sups.get(char, char) for char in str(exponent))
-            result += thinspace + times + thinspace + '10' + superscript
-        elif mode == 'eng':
-            try:
-                # If our number has an SI prefix then use it
-                prefix = prefixes[exponent]
-                result += hairspace + prefix
-            except KeyError:
-                # Otherwise display in scientific notation
-                superscript = ''.join(sups.get(char, char) for char in str(exponent))
-                result += thinspace + times + thinspace + '10' + superscript
-    return result
 
 def get_analysis_type(filepath):
     """
@@ -302,7 +220,7 @@ class LyseMainWindow(QtWidgets.QMainWindow):
             self.firstPaint.emit()
         return result
         
-class RoutineBox(lyse.ui_helpers.RoutineBoxData):
+class RoutineBox(lyse.utils.gui.RoutineBoxData):
     
     def __init__(self, app, container, exp_config, filebox, from_filebox, to_filebox, output_box_port, multishot=False):
         self.app = app # Reference to main lyse app
@@ -457,7 +375,7 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
         editor_args = self.exp_config.get('programs', 'text_editor_arguments')
         # Get the current labscript file:
         if not editor_path:
-            error_dialog(self.app, "No editor specified in the labconfig.")
+            lyse.utils.gui.error_dialog(self.app, "No editor specified in the labconfig.")
         if '{file}' in editor_args:
             # Split the args on spaces into a list, replacing {file} with the labscript file
             editor_args = [arg if arg != '{file}' else routine_filepath for arg in editor_args.split()]
@@ -467,7 +385,7 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
         try:
             subprocess.Popen([editor_path] + editor_args)
         except Exception as e:
-            error_dialog(self.app, "Unable to launch text editor specified in %s. Error was: %s" %
+            lyse.utils.gui.error_dialog(self.app, "Unable to launch text editor specified in %s. Error was: %s" %
                          (self.exp_config.config_path, str(e)))
                          
     def on_remove_selection(self):
@@ -478,7 +396,7 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
         selected_rows = set(index.row() for index in selected_indexes)
         if not selected_rows:
             return
-        if confirm and not question_dialog(self.app, "Remove %d routines?" % len(selected_rows)):
+        if confirm and not lyse.utils.gui.question_dialog(self.app, "Remove %d routines?" % len(selected_rows)):
             return
         name_items = [self.model.item(row, self.COL_NAME) for row in selected_rows]
         filepaths = [item.data(self.ROLE_FULLPATH) for item in name_items]
@@ -968,7 +886,7 @@ class DataFrameModel(QtCore.QObject):
         selected_name_items = [self._model.itemFromIndex(index) for index in selected_indexes]
         if not selected_name_items:
             return
-        if confirm and not question_dialog(self.app, "Remove %d shots?" % len(selected_name_items)):
+        if confirm and not lyse.utils.gui.question_dialog(self.app, "Remove %d shots?" % len(selected_name_items)):
             return
         # Remove from DataFrame first:
         self.dataframe = self.dataframe.drop(index.row() for index in selected_indexes)
@@ -1013,7 +931,7 @@ class DataFrameModel(QtCore.QObject):
         viewer_args = self.exp_config.get('programs', 'hdf5_viewer_arguments')
         # Get the current labscript file:
         if not viewer_path:
-            error_dialog(self.app, "No hdf5 viewer specified in the labconfig.")
+            lyse.utils.gui.error_dialog(self.app, "No hdf5 viewer specified in the labconfig.")
         if '{file}' in viewer_args:
             # Split the args on spaces into a list, replacing {file} with the labscript file
             viewer_args = [arg if arg != '{file}' else shot_filepath for arg in viewer_args.split()]
@@ -1023,7 +941,7 @@ class DataFrameModel(QtCore.QObject):
         try:
             subprocess.Popen([viewer_path] + viewer_args)
         except Exception as e:
-            error_dialog(self.app, "Unable to launch hdf5 viewer specified in %s. Error was: %s" %
+            lyse.utils.gui.error_dialog(self.app, "Unable to launch hdf5 viewer specified in %s. Error was: %s" %
                          (self.exp_config.config_path, str(e)))
         
     def set_columns_visible(self, columns_visible):
@@ -1188,7 +1106,7 @@ class DataFrameModel(QtCore.QObject):
                     continue
             value = dataframe_row[column_name]
             if isinstance(value, float):
-                value_str = scientific_notation(value)
+                value_str = lyse.utils.gui.scientific_notation(value)
             else:
                 value_str = str(value)
             lines = value_str.splitlines()
@@ -1795,7 +1713,7 @@ class Lyse(object):
             elif reply == QtWidgets.QMessageBox.Yes:
                 self.load_configuration(self.last_save_config_file)
         else:
-            error_dialog(self, 'no changes to revert')
+            lyse.utils.gui.error_dialog(self, 'no changes to revert')
 
     def on_save_configuration_as_triggered(self):
         if self.last_save_config_file is not None:
@@ -1853,7 +1771,7 @@ class Lyse(object):
 
         save_data['window_pos'] = (window_pos.x(), window_pos.y())
 
-        save_data['screen_geometry'] = lyse.ui_helpers.get_screen_geometry(self.qapplication)
+        save_data['screen_geometry'] = lyse.utils.gui.get_screen_geometry(self.qapplication)
         save_data['splitter'] = self.ui.splitter.sizes()
         save_data['splitter_vertical'] = self.ui.splitter_vertical.sizes()
 
@@ -1936,7 +1854,7 @@ class Lyse(object):
         # position was saved when 2 monitors were plugged in but there is
         # only one now, and the splitters may not make sense in light of a
         # different window size, so better to fall back to defaults:
-        current_screen_geometry = lyse.ui_helpers.get_screen_geometry(self.qapplication)
+        current_screen_geometry = lyse.utils.gui.get_screen_geometry(self.qapplication)
         if current_screen_geometry == screen_geometry:
             if 'window_size' in save_data:
                 self.ui.resize(*save_data['window_size'])
@@ -1989,7 +1907,7 @@ class Lyse(object):
                         sequence_df[col] = pandas.to_numeric(sequence_df[col], errors='ignore')
                 sequence_df.to_pickle(os.path.join(save_path, filename))
         else:
-            error_dialog(self, 'Dataframe is empty')
+            lyse.utils.gui.error_dialog(self, 'Dataframe is empty')
 
     def on_load_dataframe_triggered(self):
         default = os.path.join(self.exp_config.get('paths', 'experiment_shot_storage'), 'dataframe.pkl')

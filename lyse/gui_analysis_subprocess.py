@@ -23,7 +23,7 @@ from labscript_utils.labconfig import LabConfig, save_appconfig, load_appconfig
 from labscript_utils.qtwidgets.outputbox import OutputBox
 from labscript_utils.modulewatcher import ModuleWatcher
 import lyse
-import lyse.ui_helpers
+import lyse.utils.gui
 
 # Associate app windows with OS menu shortcuts:
 import desktop_app

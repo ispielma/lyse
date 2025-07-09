@@ -10,7 +10,7 @@ from qtutils import inmain_decorator, inmain, UiLoader, DisconnectContextManager
 import qtutils.icons
 
 import lyse
-from lyse.ui_helpers import RoutineBoxData
+from lyse.utils.gui import RoutineBoxData
 
 
 class ClassicAnalysisRoutine(object):
