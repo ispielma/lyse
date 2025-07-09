@@ -38,13 +38,15 @@ from qtutils import inmain_decorator, inmain, UiLoader, DisconnectContextManager
 from qtutils.auto_scroll_to_end import set_auto_scroll_to_end
 import qtutils.icons
 
+# Lyse imports
 import lyse.analysis
 import lyse.ui_helpers
+import lyse.widgets
 from lyse.gui_analysis_subprocess import PlotGUI
 
-# Lyse imports
 from lyse.dataframe_utilities import rangeindex_to_multiindex
 from lyse.utils import LYSE_DIR
+
 
 @inmain_decorator()
 def error_dialog(app, message):
@@ -299,53 +301,6 @@ class LyseMainWindow(QtWidgets.QMainWindow):
             self._previously_painted = True
             self.firstPaint.emit()
         return result
-
-class TreeView(QtWidgets.QTreeView):
-    leftClicked = Signal(QtCore.QModelIndex)
-    doubleLeftClicked = Signal(QtCore.QModelIndex)
-    """A QTreeView that emits a custom signal leftClicked(index) after a left
-    click on a valid index, and doubleLeftClicked(index) (in addition) on
-    double click."""
-
-    def __init__(self, *args):
-        QtWidgets.QTreeView.__init__(self, *args)
-        self._pressed_index = None
-        self._double_click = False
-
-    def mousePressEvent(self, event):
-        result = QtWidgets.QTreeView.mousePressEvent(self, event)
-        index = self.indexAt(event.pos())
-        if event.button() == QtCore.Qt.LeftButton and index.isValid():
-            self._pressed_index = self.indexAt(event.pos())
-        return result
-
-    def leaveEvent(self, event):
-        result = QtWidgets.QTreeView.leaveEvent(self, event)
-        self._pressed_index = None
-        self._double_click = False
-        return result
-
-    def mouseDoubleClickEvent(self, event):
-        # Ensure our left click event occurs regardless of whether it is the
-        # second click in a double click or not
-        result = QtWidgets.QTreeView.mouseDoubleClickEvent(self, event)
-        index = self.indexAt(event.pos())
-        if event.button() == QtCore.Qt.LeftButton and index.isValid():
-            self._pressed_index = self.indexAt(event.pos())
-            self._double_click = True
-        return result
-
-    def mouseReleaseEvent(self, event):
-        result = QtWidgets.QTreeView.mouseReleaseEvent(self, event)
-        index = self.indexAt(event.pos())
-        if event.button() == QtCore.Qt.LeftButton and index.isValid() and index == self._pressed_index:
-            self.leftClicked.emit(index)
-            if self._double_click:
-                self.doubleLeftClicked.emit(index)
-        self._pressed_index = None
-        self._double_click = False
-        return result
-
         
 class RoutineBox(lyse.ui_helpers.RoutineBoxData):
     
@@ -362,7 +317,7 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
         self.logger = logging.getLogger('lyse.RoutineBox.%s'%('multishot' if multishot else 'singleshot'))  
         
         loader = UiLoader()
-        loader.registerCustomWidget(TreeView)
+        loader.registerCustomWidget(lyse.widgets.TreeView)
         self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/routinebox.ui'))
         container.addWidget(self.ui)
 
@@ -371,7 +326,7 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
         else:
             self.ui.groupBox.setTitle('Singleshot routines')
 
-        self.model = UneditableModel()
+        self.model = lyse.widgets.UneditableModel()
         self.header = HorizontalHeaderViewWithWidgets(self.model)
         self.ui.treeView.setHeader(self.header)
         self.ui.treeView.setModel(self.model)
@@ -722,18 +677,6 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
             else:
                 self.select_all_checkbox.setCheckState(QtCore.Qt.PartiallyChecked)
 
-
-class EditColumnsDialog(QtWidgets.QDialog):
-    close_signal = Signal()
-
-    def __init__(self):
-        QtWidgets.QDialog.__init__(self, None, QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint)
-
-    def closeEvent(self, event):
-        self.close_signal.emit()
-        event.ignore()
-
-
 class EditColumns(object):
     ROLE_SORT_DATA = QtCore.Qt.UserRole + 1
     COL_VISIBLE = 0
@@ -746,9 +689,9 @@ class EditColumns(object):
         self.old_columns_visible = columns_visible.copy()
 
         loader = UiLoader()
-        self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/edit_columns.ui'), EditColumnsDialog())
+        self.ui = loader.load(os.path.join(lyse.utils.LYSE_DIR, 'user_interface/edit_columns.ui'), lyse.widgets.EditColumnsDialog())
 
-        self.model = UneditableModel()
+        self.model = lyse.widgets.UneditableModel()
         self.header = HorizontalHeaderViewWithWidgets(self.model)
         self.select_all_checkbox = QtWidgets.QCheckBox()
         self.select_all_checkbox.setTristate(False)
@@ -933,118 +876,6 @@ class EditColumns(object):
     def make_it_so(self):
         self.ui.hide()
 
-
-class ItemDelegate(QtWidgets.QStyledItemDelegate):
-
-    """An item delegate with a fixed height and a progress bar in one column"""
-    EXTRA_ROW_HEIGHT = 2
-
-    def __init__(self, app, view, model, col_status, role_status_percent):
-        self.app = app
-        self.view = view
-        self.model = model
-        self.COL_STATUS = col_status
-        self.ROLE_STATUS_PERCENT = role_status_percent
-        QtWidgets.QStyledItemDelegate.__init__(self)
-
-    def sizeHint(self, *args):
-        fontmetrics = QtGui.QFontMetrics(self.view.font())
-        text_height = fontmetrics.height()
-        row_height = text_height + self.EXTRA_ROW_HEIGHT
-        size = QtWidgets.QStyledItemDelegate.sizeHint(self, *args)
-        return QtCore.QSize(size.width(), row_height)
-
-    def paint(self, painter, option, index):
-        if index.column() == self.COL_STATUS:
-            status_percent = self.model.data(index, self.ROLE_STATUS_PERCENT)
-            if status_percent == 100:
-                # Render as a normal item - this shows whatever icon is set instead of a progress bar.
-                return QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
-            else:
-                # Method of rendering a progress bar into the view copied from
-                # Qt's 'network-torrent' example:
-                # http://qt-project.org/doc/qt-4.8/network-torrent-torrentclient-cpp.html
-
-                # Set up a QStyleOptionProgressBar to precisely mimic the
-                # environment of a progress bar.
-                progress_bar_option = QtWidgets.QStyleOptionProgressBar()
-                progress_bar_option.state = QtWidgets.QStyle.State_Enabled
-                progress_bar_option.direction = self.app.qapplication.layoutDirection()
-                progress_bar_option.rect = option.rect
-                progress_bar_option.fontMetrics = self.app.qapplication.fontMetrics()
-                progress_bar_option.minimum = 0
-                progress_bar_option.maximum = 100
-                progress_bar_option.textAlignment = QtCore.Qt.AlignCenter
-                progress_bar_option.textVisible = True
-
-                # Set the progress and text values of the style option.
-                progress_bar_option.progress = int(status_percent)
-                progress_bar_option.text = '%d%%' % status_percent
-
-                # Draw the progress bar onto the view.
-                self.app.qapplication.style().drawControl(QtWidgets.QStyle.CE_ProgressBar, progress_bar_option, painter)
-        else:
-            return QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
-
-
-class UneditableModel(QtGui.QStandardItemModel):
-
-    def flags(self, index):
-        """Return flags as normal except that the ItemIsEditable
-        flag is always False"""
-        result = QtGui.QStandardItemModel.flags(self, index)
-        return result & ~QtCore.Qt.ItemIsEditable
-
-
-class TableView(QtWidgets.QTableView):
-    leftClicked = Signal(QtCore.QModelIndex)
-    doubleLeftClicked = Signal(QtCore.QModelIndex)
-    """A QTableView that emits a custom signal leftClicked(index) after a left
-    click on a valid index, and doubleLeftClicked(index) (in addition) on
-    double click. Multiple inheritance of QObjects is not possible, so we
-    are forced to duplicate code instead of sharing code with the extremely
-    similar TreeView class in this module"""
-
-    def __init__(self, *args):
-        QtWidgets.QTableView.__init__(self, *args)
-        self._pressed_index = None
-        self._double_click = False
-
-    def mousePressEvent(self, event):
-        result = QtWidgets.QTableView.mousePressEvent(self, event)
-        index = self.indexAt(event.pos())
-        if event.button() == QtCore.Qt.LeftButton and index.isValid():
-            self._pressed_index = self.indexAt(event.pos())
-        return result
-
-    def leaveEvent(self, event):
-        result = QtWidgets.QTableView.leaveEvent(self, event)
-        self._pressed_index = None
-        self._double_click = False
-        return result
-
-    def mouseDoubleClickEvent(self, event):
-        # Ensure our left click event occurs regardless of whether it is the
-        # second click in a double click or not
-        result = QtWidgets.QTableView.mouseDoubleClickEvent(self, event)
-        index = self.indexAt(event.pos())
-        if event.button() == QtCore.Qt.LeftButton and index.isValid():
-            self._pressed_index = self.indexAt(event.pos())
-            self._double_click = True
-        return result
-
-    def mouseReleaseEvent(self, event):
-        result = QtWidgets.QTableView.mouseReleaseEvent(self, event)
-        index = self.indexAt(event.pos())
-        if event.button() == QtCore.Qt.LeftButton and index.isValid() and index == self._pressed_index:
-            self.leftClicked.emit(index)
-            if self._double_click:
-                self.doubleLeftClicked.emit(index)
-        self._pressed_index = None
-        self._double_click = False
-        return result
-        
-        
 class DataFrameModel(QtCore.QObject):
 
     COL_STATUS = 0
@@ -1060,7 +891,7 @@ class DataFrameModel(QtCore.QObject):
         self.app = app
         self._view = view
         self.exp_config = exp_config
-        self._model = UneditableModel()
+        self._model = lyse.widgets.UneditableModel()
         self.row_number_by_filepath = {}
         self._previous_n_digits = 0
 
@@ -1080,7 +911,7 @@ class DataFrameModel(QtCore.QObject):
         self._view.setModel(self._model)
         self._view.setHorizontalHeader(self._header)
         self._view.setVerticalHeader(self._vertheader)
-        self._delegate = ItemDelegate(self.app, self._view, self._model, self.COL_STATUS, self.ROLE_STATUS_PERCENT)
+        self._delegate = lyse.widgets.ItemDelegate(self.app, self._view, self._model, self.COL_STATUS, self.ROLE_STATUS_PERCENT)
         self._view.setItemDelegate(self._delegate)
         self._view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self._view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -1516,7 +1347,7 @@ class FileBox(object):
         self.logger.info('starting')
 
         loader = UiLoader()
-        loader.registerCustomWidget(TableView)
+        loader.registerCustomWidget(lyse.widgets.TableView)
         self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/filebox.ui'))
         self.ui.progressBar_add_shots.hide()
         container.addWidget(self.ui)
