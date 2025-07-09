@@ -318,7 +318,7 @@ class AnalysisWorker(object):
         lyse.Plot = Plot
         lyse._updated_data = {}
         lyse._delay_flag = False
-        lyse.delay_event.clear()
+        lyse.utils.worker.delay_event.clear()
 
         # Save the current working directory before changing it to the
         # location of the user's script:
@@ -535,7 +535,7 @@ class LyseWorker():
                     success = self.worker.do_analysis(path)
                     if success:
                         if lyse._delay_flag:
-                            lyse.delay_event.wait()
+                            lyse.utils.worker.delay_event.wait()
                         self.to_parent.put(['done', lyse._updated_data])
                     else:
                         self.to_parent.put(['error', lyse._updated_data])
