@@ -31,6 +31,7 @@ from labscript_utils.ls_zprocess import zmq_get
 from labscript_utils.dict_diff import dict_diff
 
 from labscript_utils.properties import get_attributes, get_attribute, set_attributes
+
 # lyse imports
 import lyse.dataframe_utilities
 import lyse.utils
@@ -49,7 +50,6 @@ def __getattr__(name):
         return path
     else:
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-
 
 class _RoutineStorage(object):
     """An empty object that analysis routines can store data in. It will
@@ -631,6 +631,7 @@ class Run(object):
         set_attributes(self.h5_file[group], {name: value})
             
         if spinning_top:
+            global _updated_data
             if self.h5_path not in _updated_data:
                 _updated_data[self.h5_path] = {}
             if group.startswith('results'):
