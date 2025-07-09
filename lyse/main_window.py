@@ -363,7 +363,7 @@ class RoutineBox(lyse.ui_helpers.RoutineBoxData):
         
         loader = UiLoader()
         loader.registerCustomWidget(TreeView)
-        self.ui = loader.load(os.path.join(LYSE_DIR, 'routinebox.ui'))
+        self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/routinebox.ui'))
         container.addWidget(self.ui)
 
         if multishot:
@@ -746,7 +746,7 @@ class EditColumns(object):
         self.old_columns_visible = columns_visible.copy()
 
         loader = UiLoader()
-        self.ui = loader.load(os.path.join(LYSE_DIR, 'edit_columns.ui'), EditColumnsDialog())
+        self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/edit_columns.ui'), EditColumnsDialog())
 
         self.model = UneditableModel()
         self.header = HorizontalHeaderViewWithWidgets(self.model)
@@ -1517,7 +1517,7 @@ class FileBox(object):
 
         loader = UiLoader()
         loader.registerCustomWidget(TableView)
-        self.ui = loader.load(os.path.join(LYSE_DIR, 'filebox.ui'))
+        self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/filebox.ui'))
         self.ui.progressBar_add_shots.hide()
         container.addWidget(self.ui)
         self.shots_model = DataFrameModel(self.app, self.ui.tableView, self.exp_config)
@@ -1815,7 +1815,7 @@ class Lyse(object):
         self.qapplication = qapplication
         splash.update_text('loading graphical interface')
         loader = UiLoader()
-        self.ui = loader.load(os.path.join(LYSE_DIR, 'main.ui'), LyseMainWindow(self))
+        self.ui = loader.load(os.path.join(LYSE_DIR, 'user_interface/main.ui'), LyseMainWindow(self))
 
         self.process_tree = ProcessTree.instance()
 

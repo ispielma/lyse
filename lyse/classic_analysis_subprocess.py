@@ -97,7 +97,7 @@ class Plot(object):
         self.widget = QtWidgets.QWidget()
 
         loader = UiLoader()
-        self.ui = loader.load(os.path.join(lyse.LYSE_DIR, 'plot_window.ui'), self.widget)
+        self.ui = loader.load(os.path.join(lyse.LYSE_DIR, 'user_interface/plot_window.ui'), self.widget)
         self.subwindow = mdiArea_addWindow(mdiArea_canvas, self.widget)
 
         self.set_window_title(self.identifier)
@@ -484,7 +484,7 @@ class LyseWorker():
         self.qapplication = qapplication
 
         loader = UiLoader()
-        self.ui = loader.load(os.path.join(lyse.LYSE_DIR, 'subprocess_window.ui'), LyseWorkerWindow(self))
+        self.ui = loader.load(os.path.join(lyse.LYSE_DIR, 'user_interface/subprocess_window.ui'), LyseWorkerWindow(self))
         self.ui.setWindowTitle(self.title)
         
         # Create a hidden output box
