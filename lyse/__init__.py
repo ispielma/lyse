@@ -13,21 +13,16 @@
 """Lyse analysis API
 """
 
-from lyse.dataframe_utilities import get_series_from_shot as _get_singleshot
-import os
 import pickle as pickle
 from pathlib import Path
 import sys
-import threading
 import functools
 import contextlib
 import warnings
 
 import labscript_utils.h5_lock, h5py
-from labscript_utils.labconfig import LabConfig
 import pandas
 from numpy import array, where
-import types
 
 from .__version__ import __version__
 
@@ -42,35 +37,18 @@ import lyse.utils
 
 # Import this way so LYSE_DIR is exposed when someone does import lyse or from lyse import *
 from lyse.utils import LYSE_DIR
+from lyse.utils.worker import spinning_top, _updated_data, register_plot_class, delay_results_return
 
-# If running stand-alone, and not from within lyse, the below two variables
-# will be as follows. Otherwise lyse will override them with spinning_top =
-# True and path <name of hdf5 file being analysed>:
-spinning_top = False
-# data to be sent back to the lyse GUI if running within lyse
-_updated_data = {}
-# dictionary of plot id's to classes to use for Plot object
-_plot_classes = {}
-# A fake Plot object to subclass if we are not running in the GUI
-Plot=object
-# An empty dictionary of plots (overwritten by the analysis worker if running within lyse)
-plots = {}
-# A threading.Event to delay the 
-delay_event = threading.Event()
-# a flag to determine whether we should wait for the delay event
-_delay_flag = False
-
-# get port that lyse is using for communication
-try:
-    _labconfig = LabConfig(required_params={"ports": ["lyse"]})
-    _lyse_port = int(_labconfig.get('ports', 'lyse'))
-except Exception:
-    _lyse_port = 42519
-
-if len(sys.argv) > 1:
-    path = sys.argv[1]
-else:
-    path = None
+# note: path is injected into the script namespace by AnalysisWorker at runtime
+def __getattr__(name):
+    if name == 'path':
+        from lyse.utils.worker import path
+        warnings.warn("'path' is now automatically injected into the script namespace. "
+                      "Importing it from 'lyse.path' will be deprecated.",
+                      warnings.FutureWarning)
+        return path
+    else:
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 class _RoutineStorage(object):
@@ -85,7 +63,7 @@ class _RoutineStorage(object):
 routine_storage = _RoutineStorage()
 
 
-def data(filepath=None, host='localhost', port=_lyse_port, timeout=5, n_sequences=None, filter_kwargs=None):
+def data(filepath=None, host='localhost', port=lyse.utils.LYSE_PORT, timeout=5, n_sequences=None, filter_kwargs=None):
     """Get data from the lyse dataframe or a file.
     
     This function allows for either extracting information from a run's hdf5
@@ -151,7 +129,7 @@ def data(filepath=None, host='localhost', port=_lyse_port, timeout=5, n_sequence
         the lyse dataframe, or a subset of it, is returned.
     """    
     if filepath is not None:
-        return _get_singleshot(filepath)
+        return lyse.dataframe_utilities.get_series_from_shot(filepath)
     else:
         if n_sequences is not None:
             if not (type(n_sequences) is int and n_sequences >= 0):
@@ -166,7 +144,7 @@ def data(filepath=None, host='localhost', port=_lyse_port, timeout=5, n_sequence
 
         # Allow sending 'get dataframe' (without the enclosing list) if
         # n_sequences and filter_kwargs aren't provided. This is for backwards
-        # compatability in case the server is running an outdated version of
+        # compatibility in case the server is running an outdated version of
         # lyse.
         if n_sequences is None and filter_kwargs is None:
             command = 'get dataframe'
@@ -1179,58 +1157,3 @@ class Sequence(Run):
             Not implemented, but could be.
         """
         raise NotImplementedError('If you want to use this feature please ask me to implement it! -Chris')     
-
-
-def figure_to_clipboard(figure=None, **kwargs):
-    """Copy a matplotlib figure to the clipboard as a png. 
-
-    If figure is None,
-    the current figure will be copied. Copying the figure is implemented by
-    calling figure.savefig() and then copying the image data from the
-    resulting file. If bbox_inches keyword arg is not provided,
-    bbox_inches='tight' will be used.
-
-    Args:
-        figure (:obj:`matplotlib:matplotlib.figure`, optional): 
-            Figure to copy to the clipboard. If `None`, copies the current figure.
-        **kwargs: Passed to `figure.savefig()` as kwargs.
-    """
-    
-    import matplotlib.pyplot as plt
-    from zprocess import start_daemon
-    import tempfile
-
-    if 'bbox_inches' not in kwargs:
-        kwargs['bbox_inches'] = 'tight'
-               
-    if figure is None:
-        figure = plt.gcf()
-
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
-        tempfile_name = f.name
-
-    figure.savefig(tempfile_name, **kwargs)
-
-    tempfile2clipboard = os.path.join(LYSE_DIR, 'utils/tempfile2clipboard.py')
-    start_daemon([sys.executable, tempfile2clipboard, '--delete', tempfile_name])
-
-
-def register_plot_class(identifier, cls):
-    if not spinning_top:
-        msg = """Warning: lyse.register_plot_class has no effect on scripts not run with
-            the lyse GUI.
-            """
-        sys.stderr.write(dedent(msg))
-    _plot_classes[identifier] = cls
-
-def get_plot_class(identifier):
-    return _plot_classes.get(identifier, None)
-
-def delay_results_return():
-    global _delay_flag
-    if not spinning_top:
-        msg = """Warning: lyse.delay_results_return has no effect on scripts not run 
-            with the lyse GUI.
-            """
-        sys.stderr.write(dedent(msg))
-    _delay_flag = True

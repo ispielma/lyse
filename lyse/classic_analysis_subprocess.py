@@ -36,6 +36,7 @@ from labscript_utils.labconfig import LabConfig, save_appconfig, load_appconfig
 from labscript_utils.qtwidgets.outputbox import OutputBox
 from labscript_utils.modulewatcher import ModuleWatcher
 import lyse
+import lyse.utils.worker
 import lyse.ui_helpers
 
 # Associate app windows with OS menu shortcuts:
@@ -138,7 +139,7 @@ class Plot(object):
             self.lock_action.setIcon(QtGui.QIcon(':qtutils/fugue/lock-unlock'))
 
     def on_copy_to_clipboard_triggered(self):
-        lyse.figure_to_clipboard(self.figure)
+        lyse.utils.worker.figure_to_clipboard(self.figure)
 
     @inmain_decorator()
     def save_axis_limits(self):
