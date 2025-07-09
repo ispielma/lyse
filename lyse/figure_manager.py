@@ -12,6 +12,7 @@
 #####################################################################
 """Custom matplotlib Figure Manager
 """
+
 from collections import OrderedDict
 import sys
 
