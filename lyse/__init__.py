@@ -14,7 +14,6 @@
 """
 
 from lyse.dataframe_utilities import get_series_from_shot as _get_singleshot
-from labscript_utils.dict_diff import dict_diff
 import os
 import pickle as pickle
 from pathlib import Path
@@ -22,20 +21,27 @@ import sys
 import threading
 import functools
 import contextlib
+import warnings
 
 import labscript_utils.h5_lock, h5py
 from labscript_utils.labconfig import LabConfig
 import pandas
-from numpy import array, ndarray, where
+from numpy import array, where
 import types
 
 from .__version__ import __version__
 
 from labscript_utils import dedent
 from labscript_utils.ls_zprocess import zmq_get
+from labscript_utils.dict_diff import dict_diff
 
 from labscript_utils.properties import get_attributes, get_attribute, set_attributes
-LYSE_DIR = os.path.dirname(os.path.realpath(__file__))
+# lyse imports
+import lyse.dataframe_utilities
+import lyse.utils
+
+# Import this way so LYSE_DIR is exposed when someone does import lyse or from lyse import *
+from lyse.utils import LYSE_DIR
 
 # If running stand-alone, and not from within lyse, the below two variables
 # will be as follows. Otherwise lyse will override them with spinning_top =
@@ -177,34 +183,8 @@ def data(filepath=None, host='localhost', port=_lyse_port, timeout=5, n_sequence
             raise ValueError(dedent(msg))
         # Ensure conversion to multiindex is done, which needs to be done here
         # if the server is running an outdated version of lyse.
-        _rangeindex_to_multiindex(df, inplace=True)
+        lyse.dataframe_utilities.rangeindex_to_multiindex(df, inplace=True)
         return df
-
-def _rangeindex_to_multiindex(df, inplace):
-    if isinstance(df.index, pandas.MultiIndex):
-        # The dataframe has already been converted.
-        return df
-    try:
-        padding = ('',)*(df.columns.nlevels - 1)
-        try:
-            integer_indexing = _labconfig.getboolean('lyse', 'integer_indexing')
-        except (LabConfig.NoOptionError, LabConfig.NoSectionError):
-            integer_indexing = False
-        if integer_indexing:
-            out = df.set_index(['sequence_index', 'run number', 'run repeat'], inplace=inplace, drop=False)
-            # out is None if inplace is True, and is the new dataframe is inplace is False.
-            if not inplace:
-                df = out
-        else:
-            out = df.set_index([('sequence',) + padding,('run time',) + padding], inplace=inplace, drop=False)
-            if not inplace:
-                df = out
-            df.index.names = ['sequence', 'run time']
-    except KeyError:
-        # Empty DataFrame or index column not found, so fall back to RangeIndex instead
-        pass
-    df.sort_index(inplace=True)
-    return df
 
 def globals_diff(run1, run2, group=None):
     """Take a diff of the globals between two runs.
