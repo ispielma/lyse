@@ -32,6 +32,7 @@ from qtutils.qt.QtCore import pyqtSlot as Slot
 from qtutils import inmain, inmain_later, inmain_decorator, UiLoader, inthread, DisconnectContextManager
 import qtutils.icons
 
+from labscript_utils import dedent
 from labscript_utils.labconfig import LabConfig, save_appconfig, load_appconfig
 from labscript_utils.qtwidgets.outputbox import OutputBox
 from labscript_utils.modulewatcher import ModuleWatcher
@@ -430,7 +431,7 @@ class AnalysisWorker(object):
                 Perhaps lyse.register_plot_class() was called incorrectly from your
                 script? The exception raised was:
                 """.format(identifier=identifier)
-            message = lyse.dedent(message) + '\n'.join(traceback_lines[1:])
+            message = dedent(message) + '\n'.join(traceback_lines[1:])
             message += '\n'
             message += 'Due to this error, we used the default lyse.Plot class instead.\n'
             sys.stderr.write(message)
@@ -658,7 +659,8 @@ if __name__ == '__main__':
     os.environ['MPLBACKEND'] = "qt5agg"
 
     import lyse
-    lyse.spinning_top = True
+    import lyse.utils.worker
+    lyse.utils.worker.spinning_top = True
     import lyse.figure_manager
     lyse.figure_manager.install()
 
